@@ -5,4 +5,4 @@ export const getUsers = () =>
 
 /** Création d'un utilisateur avec rôle — réservé admin */
 export const createUser = (data: { email: string; password: string; role: string }) =>
-  api.post('/auth/users', data).then(r => r.data)
+  api.post('/users', data).then(r => r.data)

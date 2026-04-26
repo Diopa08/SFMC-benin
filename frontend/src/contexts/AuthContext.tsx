@@ -13,6 +13,7 @@ interface AuthContextType {
   hasRole: (role: string) => boolean
   isAdmin: () => boolean
   isOperator: () => boolean
+  isUser: () => boolean
   signIn: (data: { token: string }) => void
   signOut: () => void
 }
@@ -47,9 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = (role: string) => user?.roles.includes(role) ?? false
   const isAdmin = () => hasRole('ROLE_ADMIN')
   const isOperator = () => hasRole('ROLE_OPERATOR') || hasRole('ROLE_ADMIN')
+  const isUser = () => hasRole('ROLE_USER') && !hasRole('ROLE_ADMIN') && !hasRole('ROLE_OPERATOR')
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, hasRole, isAdmin, isOperator, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, hasRole, isAdmin, isOperator, isUser, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

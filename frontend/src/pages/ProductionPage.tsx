@@ -5,6 +5,7 @@ import {
   type ProductionOrder, type ProductionStatus
 } from '../api/production'
 import { Factory, Plus, X, Loader2, Play, CheckCircle, FlaskConical, XCircle } from 'lucide-react'
+import RefreshButton from '../components/RefreshButton'
 
 const STATUS_LABEL: Record<ProductionStatus, string> = {
   PLANNED:       'Planifié',
@@ -36,7 +37,7 @@ export default function ProductionPage() {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [form, setForm] = useState({
-    productId: '', productName: '', quantityRequested: '',
+    productId: '', productName: '', quantityRequired: '',
     priority: 'NORMAL', notes: '', plannedStartDate: ''
   })
 
@@ -55,13 +56,11 @@ export default function ProductionPage() {
       await createProductionOrder({
         productId: Number(form.productId),
         productName: form.productName,
-        quantityRequested: Number(form.quantityRequested),
+        quantityRequired: Number(form.quantityRequired),
         priority: form.priority,
-        notes: form.notes || undefined,
-        plannedStartDate: form.plannedStartDate || undefined,
       })
       setShowForm(false)
-      setForm({ productId: '', productName: '', quantityRequested: '', priority: 'NORMAL', notes: '', plannedStartDate: '' })
+      setForm({ productId: '', productName: '', quantityRequired: '', priority: 'NORMAL', notes: '', plannedStartDate: '' })
       await load()
     } catch { setError("Erreur lors de la création de l'ordre.") }
     finally { setSaving(false) }
@@ -95,10 +94,13 @@ export default function ProductionPage() {
             <p className="text-sm text-gray-500">{orders.length} ordre(s) au total</p>
           </div>
         </div>
-        <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-          <Plus size={16} /> Nouvel ordre
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshButton onClick={load} loading={loading} />
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <Plus size={16} /> Nouvel ordre
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -146,8 +148,8 @@ export default function ProductionPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
-                  <input type="number" required min="1" value={form.quantityRequested}
-                    onChange={e => setForm({...form, quantityRequested: e.target.value})}
+                  <input type="number" required min="1" value={form.quantityRequired}
+                    onChange={e => setForm({...form, quantityRequired: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                     placeholder="500" />
                 </div>
@@ -220,8 +222,8 @@ export default function ProductionPage() {
                   <td className="px-4 py-3 font-medium text-gray-900">{o.productName}</td>
                   <td className="px-4 py-3 text-gray-600">
                     {o.quantityProduced > 0
-                      ? <span>{o.quantityProduced} / {o.quantityRequested}</span>
-                      : <span>{o.quantityRequested}</span>}
+                      ? <span>{o.quantityProduced} / {o.quantityRequired}</span>
+                      : <span>{o.quantityRequired}</span>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_COLOR[o.priority] || ''}`}>
@@ -251,7 +253,7 @@ export default function ProductionPage() {
                       )}
                       {(o.status === 'IN_PROGRESS' || o.status === 'QUALITY_CHECK') && (
                         <button onClick={() => {
-                          const qty = prompt('Quantité produite ?', String(o.quantityRequested))
+                          const qty = prompt('Quantité produite ?', String(o.quantityRequired))
                           if (qty !== null) action(() => completeProduction(o.id, Number(qty)))
                         }}
                           title="Terminer"
@@ -262,7 +264,7 @@ export default function ProductionPage() {
                       {(o.status === 'PLANNED' || o.status === 'IN_PROGRESS') && (
                         <button onClick={() => {
                           const reason = prompt('Raison de l\'annulation ?')
-                          if (reason !== null) action(() => cancelProduction(o.id, reason))
+                          if (reason !== null) action(() => cancelProduction(o.id))
                         }}
                           title="Annuler"
                           className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition">

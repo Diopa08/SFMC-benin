@@ -1,0 +1,62 @@
+# ===========================
+# FRONTEND (React / Vite)
+# ===========================
+
+# Dépendances
+node_modules/
+
+# Build output
+dist/
+
+# Variables d'environnement
+.env
+.env.local
+.env.*.local
+
+# Cache Vite
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ===========================
+# BACKEND (Spring Boot / Maven)
+# ===========================
+
+# Build output
+target/
+
+# Maven wrapper (optionnel, souvent conservé)
+# .mvn/
+
+# IDE - Eclipse / STS
+.settings/
+.classpath
+.factorypath
+.project
+
+# IDE - IntelliJ
+.idea/
+*.iml
+
+# IDE - VS Code
+.vscode/
+
+# Logs Spring Boot
+*.log
+logs/
+
+# Variables d'environnement
+*.env
+
+# ===========================
+# DOCKER
+# ===========================
+# (les Dockerfiles sont généralement trackés)
+docker-compose.override.yml

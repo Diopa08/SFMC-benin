@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getNotifications, markAsRead, markAllAsRead, type Notification } from '../api/notifications'
 import { Bell, CheckCheck, Loader2 } from 'lucide-react'
+import RefreshButton from '../components/RefreshButton'
 
 const TYPE_COLOR: Record<string, string> = {
   ORDER_CREATED:        'bg-blue-100 text-blue-700',
@@ -82,12 +83,15 @@ export default function NotificationsPage() {
             </p>
           </div>
         </div>
-        {unreadCount > 0 && (
-          <button onClick={handleReadAll}
-            className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition">
-            <CheckCheck size={16} /> Tout marquer comme lu
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <RefreshButton onClick={load} loading={loading} />
+          {unreadCount > 0 && (
+            <button onClick={handleReadAll}
+              className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition">
+              <CheckCheck size={16} /> Tout marquer comme lu
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filtres */}

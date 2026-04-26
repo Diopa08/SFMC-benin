@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { getOrders, createOrder, validateOrder, cancelOrder } from '../api/orders'
+import { getOrders, getMyOrders, createOrder, validateOrder, cancelOrder, createDelivery, confirmDelivery } from '../api/orders'
 import { getProducts } from '../api/products'
 import { useAuth } from '../contexts/AuthContext'
 import type { Order, CreateOrderRequest } from '../types'
 import type { Product } from '../types'
-import { Plus, CheckCircle, XCircle, X, Loader2, Eye, ShoppingCart, Trash2 } from 'lucide-react'
+import { Plus, CheckCircle, XCircle, X, Loader2, Eye, ShoppingCart, Trash2, Truck } from 'lucide-react'
+import RefreshButton from '../components/RefreshButton'
 
 const statusColors: Record<string, string> = {
   PENDING:       'bg-yellow-100 text-yellow-800',
@@ -16,7 +17,7 @@ const statusColors: Record<string, string> = {
 }
 const statusLabels: Record<string, string> = {
   PENDING: 'En attente', VALIDATED: 'Validée', IN_PRODUCTION: 'En production',
-  SHIPPED: 'Expédiée', DELIVERED: 'Livrée', CANCELLED: 'Annulée',
+  SHIPPED: 'En livraison', DELIVERED: 'Livrée', CANCELLED: 'Annulée',
 }
 
 interface CartItem {
@@ -47,7 +48,11 @@ export default function OrdersPage() {
 
   const load = async () => {
     setLoading(true)
-    try { setOrders(await getOrders() || []) }
+    try {
+      // ROLE_USER → uniquement ses propres commandes (sécurité côté backend aussi)
+      const fetcher = canManage ? getOrders : getMyOrders
+      setOrders(await fetcher() || [])
+    }
     catch { setOrders([]) }
     finally { setLoading(false) }
   }
@@ -84,7 +89,7 @@ export default function OrdersPage() {
     setSaving(true)
 
     const req: CreateOrderRequest = {
-      clientId: user?.email ? 1 : 1, // Le backend utilisera l'identité JWT
+      clientEmail: user?.email,
       shippingAddress,
       notes,
       items: cart.map(c => ({
@@ -102,19 +107,73 @@ export default function OrdersPage() {
       setShippingAddress('')
       setNotes('')
       load()
-    } catch { setError('Erreur lors de la création de la commande.') }
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
+      const status = e?.response?.status
+      const msg = e?.response?.data?.message || e?.message || 'Erreur inconnue'
+      setError(`Erreur ${status ?? ''} : ${msg}`)
+    }
     finally { setSaving(false) }
   }
 
-  const handleValidate = async (id: number) => { await validateOrder(id); load() }
-  const handleCancel   = async (id: number) => {
-    const reason = prompt('Motif d\'annulation ?')
-    if (reason === null) return
-    await cancelOrder(id, reason); load()
+  const handleValidate = async (id: number) => {
+    setSaving(true)
+    setError('')
+    try {
+      await validateOrder(id)
+      load()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string }
+      const msg = e?.response?.data?.message || e?.message || 'Erreur inconnue'
+      setError(`Validation échouée : ${msg}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // Clients ne voient que leurs propres commandes
-  const displayedOrders = canManage ? orders : orders.filter(o => o.clientId === 1)
+  const handleCancel = async (id: number) => {
+    const reason = prompt('Motif d\'annulation ?')
+    if (reason === null) return
+    setSaving(true)
+    setError('')
+    try {
+      await cancelOrder(id, reason)
+      load()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(`Annulation échouée : ${e?.response?.data?.message || e?.message || 'Erreur inconnue'}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCreateDelivery = async (order: Order) => {
+    const address = prompt('Adresse de livraison :', order.shippingAddress || '')
+    if (address === null) return
+    const agent = prompt('Nom du livreur (optionnel) :') ?? ''
+    try {
+      await createDelivery({
+        orderId: order.id,
+        deliveryAddress: address || order.shippingAddress,
+        deliveryAgent: agent || undefined,
+      })
+      load()
+    } catch { alert('Erreur lors de la création de la livraison.') }
+  }
+
+  const handleConfirmDelivery = async (orderId: number) => {
+    if (!confirm('Confirmer la livraison de cette commande ?')) return
+    try {
+      // On doit d'abord récupérer l'ID de la livraison via /deliveries/order/{orderId}
+      const { getDeliveryByOrder } = await import('../api/orders')
+      const delivery = await getDeliveryByOrder(orderId)
+      await confirmDelivery(delivery.id)
+      load()
+    } catch { alert('Erreur lors de la confirmation de la livraison.') }
+  }
+
+  // Le backend filtre déjà par utilisateur — displayedOrders = toutes les commandes reçues
+  const displayedOrders = orders
 
   return (
     <div className="space-y-6">
@@ -123,11 +182,21 @@ export default function OrdersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Commandes</h1>
           <p className="text-sm text-gray-500 mt-1">{displayedOrders.length} commande(s)</p>
         </div>
-        <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-          <Plus size={16} /> Nouvelle commande
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshButton onClick={load} loading={loading} />
+          <button onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <Plus size={16} /> Nouvelle commande
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-4 text-red-400 hover:text-red-600"><X size={16} /></button>
+        </div>
+      )}
 
       {/* Liste des commandes */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -151,7 +220,7 @@ export default function OrdersPage() {
                 {displayedOrders.map(o => (
                   <tr key={o.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs font-medium">{o.orderNumber}</td>
-                    {canManage && <td className="px-4 py-3 text-gray-600">Client #{o.clientId}</td>}
+                    {canManage && <td className="px-4 py-3 text-gray-600">{o.clientName ?? o.clientEmail ?? `Client #${o.clientId}`}</td>}
                     <td className="px-4 py-3 font-semibold text-blue-700">
                       {o.totalAmount.toLocaleString('fr-FR')} FCFA
                     </td>
@@ -168,8 +237,20 @@ export default function OrdersPage() {
                           <Eye size={15} />
                         </button>
                         {canManage && o.status === 'PENDING' && (
-                          <button onClick={() => handleValidate(o.id)}
-                            className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded" title="Valider">
+                          <button onClick={() => handleValidate(o.id)} disabled={saving}
+                            className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-50" title="Valider">
+                            {saving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
+                          </button>
+                        )}
+                        {canManage && o.status === 'VALIDATED' && (
+                          <button onClick={() => handleCreateDelivery(o)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Créer livraison">
+                            <Truck size={15} />
+                          </button>
+                        )}
+                        {canManage && o.status === 'SHIPPED' && (
+                          <button onClick={() => handleConfirmDelivery(o.id)}
+                            className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded" title="Confirmer livraison">
                             <CheckCircle size={15} />
                           </button>
                         )}
@@ -349,7 +430,7 @@ export default function OrdersPage() {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                {canManage && <div><span className="text-gray-500">Client :</span> <span className="font-medium">#{detail.clientId}</span></div>}
+                {canManage && <div><span className="text-gray-500">Client :</span> <span className="font-medium">{detail.clientName ?? detail.clientEmail ?? `#${detail.clientId}`}</span></div>}
                 <div><span className="text-gray-500">Montant :</span> <span className="font-bold text-blue-700">{detail.totalAmount.toLocaleString('fr-FR')} FCFA</span></div>
                 <div><span className="text-gray-500">Adresse :</span> <span>{detail.shippingAddress || '—'}</span></div>
                 {detail.notes && <div><span className="text-gray-500">Notes :</span> <span>{detail.notes}</span></div>}

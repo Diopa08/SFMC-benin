@@ -4,6 +4,7 @@ import { getProducts } from '../api/products'
 import type { Stock, StockMovement } from '../types'
 import type { Product } from '../types'
 import { Plus, RefreshCw, History, X, Loader2, AlertTriangle, Warehouse, TrendingUp, TrendingDown } from 'lucide-react'
+import RefreshButton from '../components/RefreshButton'
 
 // Entrepôts fixes (SFMC Bénin)
 const WAREHOUSES = [
@@ -79,7 +80,7 @@ export default function InventoryPage() {
     setError('')
     setSaving(true)
     try {
-      await updateStock(showUpdate.id, { quantity: moveQty, reason: moveReason, type: moveType })
+      await updateStock(showUpdate.productId, { quantity: moveQty, reason: moveReason, type: moveType })
       setShowUpdate(null)
       setMoveQty(0); setMoveReason(''); setMoveType('IN')
       load()
@@ -90,7 +91,7 @@ export default function InventoryPage() {
   }
 
   const handleMovements = async (stock: Stock) => {
-    const movements = await getMovements(stock.id)
+    const movements = await getMovements(stock.productId)
     setShowMovements({ stock, movements })
   }
 
@@ -105,10 +106,13 @@ export default function InventoryPage() {
           <h1 className="text-2xl font-bold text-gray-900">Inventaire</h1>
           <p className="text-sm text-gray-500 mt-1">{totalItems} ligne(s) de stock</p>
         </div>
-        <button onClick={() => { setShowAdd(true); setError('') }}
-          className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-          <Plus size={16} /> Ajouter un stock
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshButton onClick={load} loading={loading} />
+          <button onClick={() => { setShowAdd(true); setError('') }}
+            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <Plus size={16} /> Ajouter un stock
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
