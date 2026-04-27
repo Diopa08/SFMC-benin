@@ -112,7 +112,7 @@ public class OrderService {
             )).collect(Collectors.toList());
 
         eventPublisher.publishOrderCreated(
-            saved.getId(), saved.getClientId(),
+            saved.getId(), saved.getOrderNumber(), saved.getClientId(),
             itemEvents, saved.getTotalAmount(),
             request.getClientEmail()
         );
@@ -133,6 +133,18 @@ public class OrderService {
             Map<String, Object> notifOp = new HashMap<>(notifAdmin);
             notifOp.put("targetRole", "ROLE_OPERATOR");
             notificationClient.createNotification(notifOp);
+
+            // Notifier le client lui-même (ciblé par son email)
+            if (saved.getClientEmail() != null && !saved.getClientEmail().isBlank()) {
+                Map<String, Object> notifClient = new HashMap<>();
+                notifClient.put("type", "ORDER_CREATED");
+                notifClient.put("title", "Commande confirmée");
+                notifClient.put("message", "Votre commande " + saved.getOrderNumber() + " de " + saved.getTotalAmount() + " FCFA a bien été reçue. Vous serez notifié(e) à chaque étape.");
+                notifClient.put("targetRole", saved.getClientEmail()); // email = seul ce client voit
+                notifClient.put("referenceId", saved.getId());
+                notifClient.put("referenceType", "ORDER");
+                notificationClient.createNotification(notifClient);
+            }
         } catch (Exception e) {
             log.warn("Impossible d'envoyer la notification de commande : {}", e.getMessage());
         }

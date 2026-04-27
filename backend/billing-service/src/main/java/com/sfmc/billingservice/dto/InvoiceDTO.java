@@ -89,6 +89,36 @@ public class InvoiceDTO {
         public void setNotes(String notes) { this.notes = notes; }
     }
 
+    // ── Request : déclaration de paiement par le client ─────────────────────
+    public static class DeclarePaymentRequest {
+
+        @NotNull(message = "Le montant déclaré est obligatoire")
+        @Positive(message = "Le montant doit être positif")
+        private Double amountDeclared;
+
+        @NotNull(message = "La méthode de paiement est obligatoire")
+        private PaymentMethod paymentMethod;
+
+        /** Référence transaction (obligatoire pour Mobile Money) */
+        private String reference;
+
+        private String notes;
+
+        public DeclarePaymentRequest() {}
+
+        public Double getAmountDeclared() { return amountDeclared; }
+        public void setAmountDeclared(Double amountDeclared) { this.amountDeclared = amountDeclared; }
+
+        public PaymentMethod getPaymentMethod() { return paymentMethod; }
+        public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+
+        public String getReference() { return reference; }
+        public void setReference(String reference) { this.reference = reference; }
+
+        public String getNotes() { return notes; }
+        public void setNotes(String notes) { this.notes = notes; }
+    }
+
     // ── Response ──────────────────────────────────────────────────────────────
     public static class InvoiceResponse {
 
@@ -97,6 +127,7 @@ public class InvoiceDTO {
         private Long orderId;
         private String orderNumber;
         private Long clientId;
+        private String clientEmail;   // ← customerEmail exposé au frontend
         private Double totalAmount;
         private Double taxAmount;
         private Double netAmount;
@@ -105,6 +136,7 @@ public class InvoiceDTO {
         private LocalDate dueDate;
         private LocalDate paidAt;
         private String notes;
+        private String paymentReference;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -147,6 +179,9 @@ public class InvoiceDTO {
         public Long getClientId() { return clientId; }
         public void setClientId(Long clientId) { this.clientId = clientId; }
 
+        public String getClientEmail() { return clientEmail; }
+        public void setClientEmail(String clientEmail) { this.clientEmail = clientEmail; }
+
         public Double getTotalAmount() { return totalAmount; }
         public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
 
@@ -170,6 +205,9 @@ public class InvoiceDTO {
 
         public String getNotes() { return notes; }
         public void setNotes(String notes) { this.notes = notes; }
+
+        public String getPaymentReference() { return paymentReference; }
+        public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
 
         public LocalDateTime getCreatedAt() { return createdAt; }
         public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

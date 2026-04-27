@@ -17,11 +17,11 @@ public class OrderEventPublisher {
     }
 
     // ✅ Publier OrderCreated → billing-service
-    public void publishOrderCreated(Long orderId, Long clientId,
+    public void publishOrderCreated(Long orderId, String orderNumber, Long clientId,
                                      List<OrderItemEvent> items,
                                      double totalAmount, String email) {
         OrderCreatedEvent event = new OrderCreatedEvent(
-            orderId, clientId, items,
+            orderId, orderNumber, clientId, items,
             totalAmount, email,
             Instant.now().toString()
         );

@@ -35,6 +35,9 @@ public class Invoice {
 
     private String notes;
 
+    /** Référence de la transaction déclarée par le client (ex : ID MoMo) */
+    private String paymentReference;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -98,6 +101,9 @@ public class Invoice {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public String getPaymentReference() { return paymentReference; }
+    public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

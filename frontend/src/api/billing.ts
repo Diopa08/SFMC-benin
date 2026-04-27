@@ -1,5 +1,5 @@
 import client from './client'
-import type { Invoice, RecordPaymentRequest } from '../types'
+import type { Invoice, RecordPaymentRequest, DeclarePaymentRequest } from '../types'
 
 export const getInvoices = () =>
   client.get<Invoice[]>('/invoices').then(r => r.data)
@@ -17,7 +17,13 @@ export const getInvoicesByClient = (clientId: number) =>
   client.get<Invoice[]>(`/invoices/client/${clientId}`).then(r => r.data)
 
 export const recordPayment = (id: number, data: RecordPaymentRequest) =>
-  client.put<Invoice>(`/invoices/${id}/pay`, data).then(r => r.data)
+  client.post<Invoice>(`/invoices/${id}/pay`, data).then(r => r.data)
+
+export const declarePayment = (id: number, data: DeclarePaymentRequest) =>
+  client.post<Invoice>(`/invoices/${id}/declare-payment`, data).then(r => r.data)
+
+export const confirmPayment = (id: number) =>
+  client.post<Invoice>(`/invoices/${id}/confirm-payment`).then(r => r.data)
 
 export const cancelInvoice = (id: number) =>
   client.delete<Invoice>(`/invoices/${id}/cancel`).then(r => r.data)

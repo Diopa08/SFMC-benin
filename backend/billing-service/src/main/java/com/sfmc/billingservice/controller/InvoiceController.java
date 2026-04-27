@@ -1,5 +1,6 @@
 package com.sfmc.billingservice.controller;
 
+import com.sfmc.billingservice.dto.InvoiceDTO.DeclarePaymentRequest;
 import com.sfmc.billingservice.dto.InvoiceDTO.GenerateInvoiceRequest;
 import com.sfmc.billingservice.dto.InvoiceDTO.InvoiceResponse;
 import com.sfmc.billingservice.dto.InvoiceDTO.RecordPaymentRequest;
@@ -66,13 +67,30 @@ public class InvoiceController {
         return ResponseEntity.ok(invoiceService.generateInvoice(request));
     }
 
-    /** Enregistrer un paiement */
+    /** Enregistrer un paiement (admin) */
     @PostMapping("/invoices/{id}/pay")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")
     public ResponseEntity<InvoiceResponse> recordPayment(
             @PathVariable Long id,
             @RequestBody @Valid RecordPaymentRequest request) {
         return ResponseEntity.ok(invoiceService.recordPayment(id, request));
+    }
+
+    /** Déclarer un paiement (client) */
+    @PostMapping("/invoices/{id}/declare-payment")
+    @PreAuthorize("hasAuthority('ROLE_USER')")
+    public ResponseEntity<InvoiceResponse> declarePayment(
+            @PathVariable Long id,
+            @RequestBody @Valid DeclarePaymentRequest request,
+            @RequestHeader("X-User-Email") String clientEmail) {
+        return ResponseEntity.ok(invoiceService.declarePayment(id, request, clientEmail));
+    }
+
+    /** Confirmer un paiement déclaré (admin/opérateur) */
+    @PostMapping("/invoices/{id}/confirm-payment")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")
+    public ResponseEntity<InvoiceResponse> confirmPayment(@PathVariable Long id) {
+        return ResponseEntity.ok(invoiceService.confirmPayment(id));
     }
 
     /** Annuler une facture */

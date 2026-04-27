@@ -112,7 +112,7 @@ export interface CreateDeliveryRequest {
 }
 
 // ─── Invoice / Billing ────────────────────────────────
-export type InvoiceStatus = 'UNPAID' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'CANCELLED'
+export type InvoiceStatus = 'UNPAID' | 'PAID' | 'PARTIAL' | 'PENDING_PAYMENT' | 'OVERDUE' | 'CANCELLED'
 export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHECK' | 'MOBILE_MONEY'
 
 export interface Invoice {
@@ -127,6 +127,7 @@ export interface Invoice {
   taxAmount: number
   status: InvoiceStatus
   paymentMethod?: PaymentMethod
+  paymentReference?: string
   dueDate?: string
   paidAt?: string
   notes?: string
@@ -136,6 +137,12 @@ export interface Invoice {
 export interface RecordPaymentRequest {
   amountPaid: number
   paymentMethod: PaymentMethod
+  notes?: string
+}
+export interface DeclarePaymentRequest {
+  amountDeclared: number
+  paymentMethod: PaymentMethod
+  reference?: string
   notes?: string
 }
 

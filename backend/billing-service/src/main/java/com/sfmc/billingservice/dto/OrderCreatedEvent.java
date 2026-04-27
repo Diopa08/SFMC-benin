@@ -6,6 +6,7 @@ import java.util.List;
 public class OrderCreatedEvent {
 
     private Long orderId;
+    private String orderNumber;
     private Long clientId;
     private List<OrderItemEvent> items;
     private Double totalAmount;
@@ -29,6 +30,9 @@ public class OrderCreatedEvent {
 
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
+
+    public String getOrderNumber() { return orderNumber; }
+    public void setOrderNumber(String orderNumber) { this.orderNumber = orderNumber; }
 
     public Long getClientId() { return clientId; }
     public void setClientId(Long clientId) { this.clientId = clientId; }

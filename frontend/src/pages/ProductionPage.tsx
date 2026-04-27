@@ -4,6 +4,8 @@ import {
   qualityCheck, completeProduction, cancelProduction,
   type ProductionOrder, type ProductionStatus
 } from '../api/production'
+import { getProducts } from '../api/products'
+import type { Product } from '../types'
 import { Factory, Plus, X, Loader2, Play, CheckCircle, FlaskConical, XCircle } from 'lucide-react'
 import RefreshButton from '../components/RefreshButton'
 
@@ -36,6 +38,8 @@ export default function ProductionPage() {
   const [error, setError]   = useState('')
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving]   = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
   const [form, setForm] = useState({
     productId: '', productName: '', quantityRequired: '',
     priority: 'NORMAL', notes: '', plannedStartDate: ''
@@ -50,6 +54,23 @@ export default function ProductionPage() {
 
   useEffect(() => { load() }, [])
 
+  const openForm = async () => {
+    setShowForm(true)
+    setLoadingProducts(true)
+    try { setProducts(await getProducts()) }
+    catch { /* silently keep empty list */ }
+    finally { setLoadingProducts(false) }
+  }
+
+  const handleProductSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = products.find(p => p.id === Number(e.target.value))
+    if (selected) {
+      setForm(f => ({ ...f, productId: String(selected.id), productName: selected.name }))
+    } else {
+      setForm(f => ({ ...f, productId: '', productName: '' }))
+    }
+  }
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true)
     try {
@@ -60,6 +81,7 @@ export default function ProductionPage() {
         priority: form.priority,
       })
       setShowForm(false)
+      setProducts([])
       setForm({ productId: '', productName: '', quantityRequired: '', priority: 'NORMAL', notes: '', plannedStartDate: '' })
       await load()
     } catch { setError("Erreur lors de la création de l'ordre.") }
@@ -96,7 +118,7 @@ export default function ProductionPage() {
         </div>
         <div className="flex items-center gap-2">
           <RefreshButton onClick={load} loading={loading} />
-          <button onClick={() => setShowForm(true)}
+          <button onClick={openForm}
             className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
             <Plus size={16} /> Nouvel ordre
           </button>
@@ -126,24 +148,26 @@ export default function ProductionPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Nouvel ordre de production</h2>
-              <button onClick={() => setShowForm(false)}><X size={20} className="text-gray-400" /></button>
+              <button type="button" onClick={() => { setShowForm(false); setProducts([]) }}><X size={20} className="text-gray-400" /></button>
             </div>
             <form onSubmit={handleCreate} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ID Produit</label>
-                  <input type="number" required value={form.productId}
-                    onChange={e => setForm({...form, productId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
-                    placeholder="1" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom du produit</label>
-                  <input type="text" required value={form.productName}
-                    onChange={e => setForm({...form, productName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
-                    placeholder="Ciment Portland" />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Produit</label>
+                {loadingProducts ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                    <Loader2 size={14} className="animate-spin" /> Chargement des produits…
+                  </div>
+                ) : (
+                  <select required value={form.productId} onChange={handleProductSelect}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none bg-white">
+                    <option value="">— Sélectionner un produit —</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.unit ? `(${p.unit})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -178,7 +202,7 @@ export default function ProductionPage() {
                   placeholder="Instructions particulières..." />
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowForm(false)}
+                <button type="button" onClick={() => { setShowForm(false); setProducts([]) }}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">
                   Annuler
                 </button>
