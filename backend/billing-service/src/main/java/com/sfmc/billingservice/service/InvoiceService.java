@@ -12,13 +12,20 @@ import com.sfmc.billingservice.exception.BillingException.InvoiceNotModifiableEx
 import com.sfmc.billingservice.exception.BillingException.InvalidPaymentException;
 import com.sfmc.billingservice.model.Invoice;
 import com.sfmc.billingservice.model.InvoiceStatus;
+import com.sfmc.billingservice.model.PaymentMethod;
 import com.sfmc.billingservice.repository.InvoiceRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -37,13 +44,22 @@ public class InvoiceService {
     /** TVA appliquée au Bénin : 18 % */
     private static final double TAX_RATE = 0.18;
 
+    @Value("${fedapay.secret-key}")
+    private String fedapaySecretKey;
+
+    @Value("${fedapay.api-url:https://sandbox-api.fedapay.com/v1}")
+    private String fedapayApiUrl;
+
     private final InvoiceRepository invoiceRepository;
     private final NotificationClient notificationClient;
+    private final RestTemplate restTemplate;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
-                          NotificationClient notificationClient) {
+                          NotificationClient notificationClient,
+                          RestTemplate restTemplate) {
         this.invoiceRepository = invoiceRepository;
         this.notificationClient = notificationClient;
+        this.restTemplate = restTemplate;
     }
 
     // ─── Création depuis un événement RabbitMQ ───────────────────────────────
@@ -260,6 +276,163 @@ public class InvoiceService {
         }
 
         return toResponse(saved);
+    }
+
+    // ─── Vérification & confirmation via FedaPay ─────────────────────────────
+
+    @Transactional
+    public InvoiceResponse verifyAndConfirmFedapay(Long invoiceId, String fedapayTransactionId) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+            .orElseThrow(() -> new InvoiceNotFoundException(invoiceId));
+
+        // Idempotent : déjà payée → on retourne simplement
+        if (invoice.getStatus() == InvoiceStatus.PAID) {
+            log.info("Facture #{} déjà payée — idempotent FedaPay", invoiceId);
+            return toResponse(invoice);
+        }
+
+        if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
+            throw new InvoiceNotModifiableException("CANCELLED");
+        }
+
+        // Appel à l'API FedaPay pour vérifier la transaction
+        boolean approved = callFedapayApi(fedapayTransactionId, invoice.getTotalAmount());
+        if (!approved) {
+            throw new InvalidPaymentException(
+                "Transaction FedaPay " + fedapayTransactionId + " non approuvée ou montant incorrect.");
+        }
+
+        invoice.setStatus(InvoiceStatus.PAID);
+        invoice.setPaymentMethod(PaymentMethod.MOBILE_MONEY);
+        invoice.setPaymentReference(fedapayTransactionId);
+        invoice.setPaidAt(LocalDate.now());
+        invoice.setNotes("Paiement confirmé automatiquement via FedaPay. Transaction : " + fedapayTransactionId);
+
+        Invoice saved = invoiceRepository.save(invoice);
+        log.info("Paiement FedaPay confirmé — facture #{} transaction {}", invoiceId, fedapayTransactionId);
+
+        // Notifier le client
+        try {
+            if (saved.getCustomerEmail() != null && !saved.getCustomerEmail().isBlank()) {
+                Map<String, Object> notif = new HashMap<>();
+                notif.put("type",          "INVOICE_PAID");
+                notif.put("title",         "Paiement confirmé ✓");
+                notif.put("message",       "Votre paiement Mobile Money pour la facture "
+                    + saved.getInvoiceNumber() + " (" + saved.getTotalAmount()
+                    + " FCFA) a été confirmé automatiquement via FedaPay. Merci !");
+                notif.put("targetRole",    saved.getCustomerEmail());
+                notif.put("referenceId",   saved.getId());
+                notif.put("referenceType", "INVOICE");
+                notificationClient.createNotification(notif);
+            }
+        } catch (Exception e) {
+            log.warn("Impossible d'envoyer la notification FedaPay : {}", e.getMessage());
+        }
+
+        return toResponse(saved);
+    }
+
+    /** Appel REST vers l'API FedaPay pour vérifier une transaction */
+    @SuppressWarnings("unchecked")
+    private boolean callFedapayApi(String transactionId, Double expectedAmount) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + fedapaySecretKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                fedapayApiUrl + "/transactions/" + transactionId,
+                HttpMethod.GET,
+                entity,
+                Map.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FedaPay API réponse non 2xx pour transaction {}", transactionId);
+                return false;
+            }
+
+            // La réponse FedaPay encapsule dans "v1/transaction"
+            Map<String, Object> body = response.getBody();
+            Map<String, Object> tx   = (Map<String, Object>) body.get("v1/transaction");
+            if (tx == null) {
+                log.warn("FedaPay : clé 'v1/transaction' absente dans la réponse");
+                return false;
+            }
+
+            String status = (String) tx.get("status");
+            Number amount = (Number) tx.get("amount");
+
+            boolean statusOk = "approved".equalsIgnoreCase(status);
+            boolean amountOk = amount != null && Math.abs(amount.doubleValue() - expectedAmount) < 1.0;
+
+            log.info("FedaPay verify — tx:{} status:{} amount:{} expected:{} → ok={}",
+                transactionId, status, amount, expectedAmount, statusOk && amountOk);
+
+            return statusOk && amountOk;
+
+        } catch (Exception e) {
+            log.error("Erreur appel API FedaPay pour transaction {} : {}", transactionId, e.getMessage());
+            return false;
+        }
+    }
+
+    // ─── Webhook FedaPay (appelé par les serveurs FedaPay) ───────────────────
+
+    @Transactional
+    public void handleFedapayWebhook(Map<String, Object> payload) {
+        try {
+            String eventName = (String) payload.get("name");
+            log.info("Webhook FedaPay reçu : {}", eventName);
+
+            if (!"transaction.approved".equals(eventName)) return;
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> entity = (Map<String, Object>) payload.get("entity");
+            if (entity == null) return;
+
+            String transactionId = String.valueOf(entity.get("id"));
+            Number amount        = (Number) entity.get("amount");
+            String description   = (String) entity.getOrDefault("description", "");
+
+            // Extraire l'ID facture depuis la description : "Facture INV-xxx | id:123"
+            Long invoiceId = extractInvoiceId(description);
+            if (invoiceId == null) {
+                log.warn("Webhook FedaPay : impossible d'extraire l'ID facture depuis '{}'", description);
+                return;
+            }
+
+            invoiceRepository.findById(invoiceId).ifPresent(invoice -> {
+                if (invoice.getStatus() == InvoiceStatus.PAID) return; // déjà traité
+
+                double expectedAmount = invoice.getTotalAmount();
+                if (amount == null || Math.abs(amount.doubleValue() - expectedAmount) >= 1.0) {
+                    log.warn("Webhook FedaPay : montant {} ≠ attendu {} pour facture #{}", amount, expectedAmount, invoiceId);
+                    return;
+                }
+
+                invoice.setStatus(InvoiceStatus.PAID);
+                invoice.setPaymentMethod(PaymentMethod.MOBILE_MONEY);
+                invoice.setPaymentReference(transactionId);
+                invoice.setPaidAt(LocalDate.now());
+                invoice.setNotes("Paiement confirmé par webhook FedaPay. Transaction : " + transactionId);
+                invoiceRepository.save(invoice);
+                log.info("Webhook FedaPay : facture #{} marquée PAID via tx {}", invoiceId, transactionId);
+            });
+
+        } catch (Exception e) {
+            log.error("Erreur traitement webhook FedaPay : {}", e.getMessage());
+        }
+    }
+
+    private Long extractInvoiceId(String description) {
+        try {
+            int idx = description.indexOf("| id:");
+            if (idx == -1) return null;
+            return Long.parseLong(description.substring(idx + 5).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     // ─── Annuler une facture ─────────────────────────────────────────────────

@@ -177,6 +177,8 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SERVER_ERROR_INCLUDE_MESSAGE: always
       SERVER_ERROR_INCLUDE_BINDING_ERRORS: always
+      FEDAPAY_SECRET_KEY: sk_sandbox_TrSFDdSZXLibsmlKJNuZSYe_
+      FEDAPAY_API_URL: https://sandbox-api.fedapay.com/v1
     depends_on:
       mysql:
         condition: service_healthy

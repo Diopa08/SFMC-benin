@@ -4,17 +4,19 @@ public class ProductionTriggerEvent {
 
     private Long orderId;
     private Long productId;
+    private String productName;
     private int quantityNeeded;
     private String priority;
     private String timestamp;
 
     public ProductionTriggerEvent() {}
 
-    public ProductionTriggerEvent(Long orderId, Long productId,
+    public ProductionTriggerEvent(Long orderId, Long productId, String productName,
                                    int quantityNeeded, String priority,
                                    String timestamp) {
         this.orderId = orderId;
         this.productId = productId;
+        this.productName = productName;
         this.quantityNeeded = quantityNeeded;
         this.priority = priority;
         this.timestamp = timestamp;
@@ -24,6 +26,8 @@ public class ProductionTriggerEvent {
     public void setOrderId(Long orderId) { this.orderId = orderId; }
     public Long getProductId() { return productId; }
     public void setProductId(Long productId) { this.productId = productId; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
     public int getQuantityNeeded() { return quantityNeeded; }
     public void setQuantityNeeded(int q) { this.quantityNeeded = q; }
     public String getPriority() { return priority; }

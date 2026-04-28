@@ -2,6 +2,7 @@ package com.sfmc.production_service.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Entity
 @Table(name = "production_orders")
@@ -10,6 +11,9 @@ public class ProductionOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true)
+    private String referenceNumber;
 
     private Long orderId;
     private Long productId;
@@ -31,9 +35,16 @@ public class ProductionOrder {
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
         this.status = ProductionStatus.PLANNED;
+        // Référence générée avant l'insert — sera affinée avec l'id dans le service
+        if (this.referenceNumber == null) {
+            String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+            this.referenceNumber = "PROD-" + ts + "-TMP";
+        }
     }
 
     public Long getId() { return id; }
+    public String getReferenceNumber() { return referenceNumber; }
+    public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
     public Long getProductId() { return productId; }

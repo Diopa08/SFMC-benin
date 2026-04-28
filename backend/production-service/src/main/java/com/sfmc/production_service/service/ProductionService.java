@@ -33,29 +33,32 @@ public class ProductionService {
     // ✅ Créer depuis un event RabbitMQ
     @Transactional
     public ProductionOrder createProductionOrder(ProductionTriggerEvent event) {
-        ProductionOrder order = new ProductionOrder(); // ✅ constructeur vide
-
-        // ✅ getters au lieu de record accessors
+        ProductionOrder order = new ProductionOrder();
         order.setOrderId(event.getOrderId());
         order.setProductId(event.getProductId());
+        order.setProductName(event.getProductName());   // ← nom du produit
         order.setQuantityRequired(event.getQuantityNeeded());
-        order.setPriority(event.getPriority());
-        return repository.save(order);
+        order.setPriority(event.getPriority() != null ? event.getPriority() : "NORMAL");
+        ProductionOrder saved = repository.save(order);
+        // Finaliser la référence avec l'id généré
+        saved.setReferenceNumber("PROD-" + java.time.LocalDate.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyyMM")) + "-" + saved.getId());
+        return repository.save(saved);
     }
 
     // ✅ Créer manuellement depuis le controller
     @Transactional
     public ProductionOrder createManually(ProductionRequest request) {
-        ProductionOrder order = new ProductionOrder(); // ✅ constructeur vide
-
-        // ✅ getters au lieu de record accessors
+        ProductionOrder order = new ProductionOrder();
         order.setProductId(request.getProductId());
         order.setProductName(request.getProductName());
         order.setQuantityRequired(request.getQuantityRequired());
-        order.setPriority(
-            request.getPriority() != null ? request.getPriority() : "NORMAL"
-        );
-        return repository.save(order);
+        order.setPriority(request.getPriority() != null ? request.getPriority() : "NORMAL");
+        ProductionOrder saved = repository.save(order);
+        // Finaliser la référence avec l'id généré
+        saved.setReferenceNumber("PROD-" + java.time.LocalDate.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyyMM")) + "-" + saved.getId());
+        return repository.save(saved);
     }
 
     // Démarrer la production

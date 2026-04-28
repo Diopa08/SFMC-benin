@@ -37,9 +37,9 @@ public class OrderEventPublisher {
 
     // ✅ Publier ProductionTrigger → production-service
     public void publishProductionTrigger(Long orderId, Long productId,
-                                          int quantity) {
+                                          String productName, int quantity) {
         ProductionTriggerEvent event = new ProductionTriggerEvent(
-            orderId, productId, quantity, "HIGH",
+            orderId, productId, productName, quantity, "HIGH",
             Instant.now().toString()
         );
 

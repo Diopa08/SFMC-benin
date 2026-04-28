@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   getOrders, getMyOrders, createOrder, validateOrder, cancelOrder,
-  createDelivery, confirmDelivery
+  createDelivery, confirmDelivery, updateOrderStatus, startDeliveryTransit,
+  getDeliveryByOrder
 } from '../api/orders'
 import { getProducts } from '../api/products'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,7 +11,7 @@ import type { Product } from '../types'
 import {
   Plus, CheckCircle, XCircle, X, Loader2, Eye,
   ShoppingCart, Trash2, Truck, Package,
-  Clock, Zap, MapPin, ChevronRight, FileText
+  Clock, Zap, MapPin, ChevronRight, FileText, Factory
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import RefreshButton from '../components/RefreshButton'
@@ -164,23 +165,66 @@ export default function OrdersPage() {
     } finally { setSaving(false) }
   }
 
+  /** VALIDATED → IN_PRODUCTION */
+  const handleMarkInProduction = async (orderId: number) => {
+    if (!confirm('Passer cette commande en production ?')) return
+    setSaving(true); setError('')
+    try {
+      await updateOrderStatus(orderId, 'IN_PRODUCTION')
+      load()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(`Erreur : ${e?.response?.data?.message || e?.message}`)
+    } finally { setSaving(false) }
+  }
+
+  /** VALIDATED ou IN_PRODUCTION → SHIPPED : crée (ou réutilise) la livraison + met à jour le statut */
   const handleCreateDelivery = async (order: Order) => {
     const address = prompt('Adresse de livraison :', order.shippingAddress || '')
     if (address === null) return
     const agent = prompt('Nom du livreur (optionnel) :') ?? ''
+    setSaving(true); setError('')
     try {
-      await createDelivery({ orderId: order.id, deliveryAddress: address || order.shippingAddress, deliveryAgent: agent || undefined })
+      // Tenter de créer la livraison ; si elle existe déjà, récupérer l'existante
+      try {
+        await createDelivery({
+          orderId: order.id,
+          deliveryAddress: address || order.shippingAddress,
+          deliveryAgent: agent || undefined,
+        })
+      } catch (createErr: unknown) {
+        const msg = (createErr as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? ''
+        // Si la livraison existe déjà → on continue quand même pour mettre le statut
+        if (!msg.toLowerCase().includes('existe déjà') && !msg.toLowerCase().includes('already exists')) {
+          throw createErr   // autre erreur → on la propage
+        }
+      }
+      // Dans tous les cas, passer la commande en SHIPPED
+      await updateOrderStatus(order.id, 'SHIPPED')
       load()
-    } catch { alert('Erreur lors de la création de la livraison.') }
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(`Erreur livraison : ${e?.response?.data?.message || e?.message}`)
+    } finally { setSaving(false) }
   }
 
+  /** SHIPPED → DELIVERED : démarre le transit puis confirme + met à jour la commande */
   const handleConfirmDelivery = async (orderId: number) => {
     if (!confirm('Confirmer la livraison de cette commande ?')) return
+    setSaving(true); setError('')
     try {
-      const { getDeliveryByOrder } = await import('../api/orders')
       const delivery = await getDeliveryByOrder(orderId)
-      await confirmDelivery(delivery.id); load()
-    } catch { alert('Erreur lors de la confirmation.') }
+      // Livraison doit passer IN_TRANSIT avant d'être confirmée
+      await startDeliveryTransit(delivery.id)
+      await confirmDelivery(delivery.id)
+      // ✅ Mettre la commande en DELIVERED
+      await updateOrderStatus(orderId, 'DELIVERED')
+      load()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string }
+      setError(`Erreur confirmation : ${e?.response?.data?.message || e?.message}`)
+    } finally { setSaving(false) }
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -250,12 +294,28 @@ export default function OrdersPage() {
                             </button>
                           )}
                           {o.status === 'VALIDATED' && (
-                            <button onClick={() => handleCreateDelivery(o)} className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Créer livraison">
+                            <>
+                              {/* Option 1 : passer en production */}
+                              <button onClick={() => handleMarkInProduction(o.id)} disabled={saving}
+                                className="p-1.5 text-gray-500 hover:text-violet-600 hover:bg-violet-50 rounded disabled:opacity-50" title="Passer en production">
+                                <Factory size={15} />
+                              </button>
+                              {/* Option 2 : expédier directement */}
+                              <button onClick={() => handleCreateDelivery(o)} disabled={saving}
+                                className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-50" title="Expédier (créer livraison)">
+                                <Truck size={15} />
+                              </button>
+                            </>
+                          )}
+                          {o.status === 'IN_PRODUCTION' && (
+                            <button onClick={() => handleCreateDelivery(o)} disabled={saving}
+                              className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-50" title="Expédier (créer livraison)">
                               <Truck size={15} />
                             </button>
                           )}
                           {o.status === 'SHIPPED' && (
-                            <button onClick={() => handleConfirmDelivery(o.id)} className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded" title="Confirmer livraison">
+                            <button onClick={() => handleConfirmDelivery(o.id)} disabled={saving}
+                              className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-50" title="Confirmer livraison">
                               <CheckCircle size={15} />
                             </button>
                           )}

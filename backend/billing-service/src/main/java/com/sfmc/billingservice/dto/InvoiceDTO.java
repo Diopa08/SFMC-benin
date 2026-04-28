@@ -119,6 +119,18 @@ public class InvoiceDTO {
         public void setNotes(String notes) { this.notes = notes; }
     }
 
+    // ── Request : vérification paiement FedaPay ──────────────────────────────
+    public static class FedapayVerifyRequest {
+
+        @NotBlank(message = "L'identifiant de transaction FedaPay est obligatoire")
+        private String transactionId;
+
+        public FedapayVerifyRequest() {}
+
+        public String getTransactionId() { return transactionId; }
+        public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    }
+
     // ── Response ──────────────────────────────────────────────────────────────
     public static class InvoiceResponse {
 

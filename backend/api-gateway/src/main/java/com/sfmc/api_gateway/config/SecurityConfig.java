@@ -18,7 +18,8 @@ public class SecurityConfig {
             .authorizeExchange(auth -> auth
                 .pathMatchers(
                     "/api/auth/login",
-                    "/api/auth/register"
+                    "/api/auth/register",
+                    "/api/webhooks/**"          // FedaPay webhook — pas de JWT
                 ).permitAll()
                 .anyExchange().authenticated()
             )

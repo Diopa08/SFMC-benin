@@ -1,6 +1,7 @@
 package com.sfmc.billingservice.controller;
 
 import com.sfmc.billingservice.dto.InvoiceDTO.DeclarePaymentRequest;
+import com.sfmc.billingservice.dto.InvoiceDTO.FedapayVerifyRequest;
 import com.sfmc.billingservice.dto.InvoiceDTO.GenerateInvoiceRequest;
 import com.sfmc.billingservice.dto.InvoiceDTO.InvoiceResponse;
 import com.sfmc.billingservice.dto.InvoiceDTO.RecordPaymentRequest;
@@ -10,6 +11,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 import java.util.List;
 
@@ -98,5 +101,21 @@ public class InvoiceController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")
     public ResponseEntity<InvoiceResponse> cancelInvoice(@PathVariable Long id) {
         return ResponseEntity.ok(invoiceService.cancelInvoice(id));
+    }
+
+    /** Vérifier et confirmer un paiement FedaPay (appelé par le frontend après succès widget) */
+    @PostMapping("/invoices/{id}/verify-fedapay")
+    @PreAuthorize("hasAnyAuthority('ROLE_USER', 'ROLE_ADMIN', 'ROLE_OPERATOR')")
+    public ResponseEntity<InvoiceResponse> verifyFedapay(
+            @PathVariable Long id,
+            @RequestBody @Valid FedapayVerifyRequest request) {
+        return ResponseEntity.ok(invoiceService.verifyAndConfirmFedapay(id, request.getTransactionId()));
+    }
+
+    /** Webhook FedaPay — appelé par les serveurs FedaPay (pas de JWT requis) */
+    @PostMapping("/webhooks/fedapay")
+    public ResponseEntity<Void> fedapayWebhook(@RequestBody Map<String, Object> payload) {
+        invoiceService.handleFedapayWebhook(payload);
+        return ResponseEntity.ok().build();
     }
 }

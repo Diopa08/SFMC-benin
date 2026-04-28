@@ -63,6 +63,11 @@ spring:
           predicates:
             - Path=/api/notifications/**
 
+        - id: billing-webhook
+          uri: lb://billing-service
+          predicates:
+            - Path=/api/webhooks/**
+
 eureka:
   client:
     service-url:

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   getInvoices, getMyInvoices, recordPayment,
-  cancelInvoice, declarePayment, confirmPayment
+  cancelInvoice, declarePayment, confirmPayment, verifyFedapayPayment
 } from '../api/billing'
 import { useAuth } from '../contexts/AuthContext'
 import type { Invoice, RecordPaymentRequest, DeclarePaymentRequest, PaymentMethod } from '../types'
@@ -37,6 +37,16 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   PENDING_PAYMENT: <ShieldCheck size={12} />,
   OVERDUE:         <AlertTriangle size={12} />,
   CANCELLED:       <XCircle size={12} />,
+}
+
+// ─── FedaPay ───────────────────────────────────────────────────────────────────
+const FEDAPAY_PUBLIC_KEY = 'pk_sandbox_TKFvKhnpjyYKu8c5bWP7weA7'
+
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    FedaPay: any
+  }
 }
 
 const PAY_METHODS  = ['CASH', 'BANK_TRANSFER', 'CHECK', 'MOBILE_MONEY'] as const
@@ -133,20 +143,79 @@ function DeclarePaymentModal({
   onClose: () => void
   onSuccess: () => void
 }) {
-  const [method, setMethod]     = useState<PaymentMethod>('MOBILE_MONEY')
+  const [method, setMethod]       = useState<PaymentMethod>('MOBILE_MONEY')
   const [reference, setReference] = useState('')
-  const [amount, setAmount]     = useState(invoice.totalAmount)
-  const [notes, setNotes]       = useState('')
-  const [saving, setSaving]     = useState(false)
-  const [error, setError]       = useState('')
-  const [done, setDone]         = useState(false)
+  const [amount]                  = useState(invoice.totalAmount)
+  const [notes, setNotes]         = useState('')
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState('')
+  const [done, setDone]           = useState(false)
+  const [doneType, setDoneType]   = useState<'fedapay' | 'declare'>('declare')
 
   const instructions = PAY_INSTRUCTIONS[method]
-  const needsRef     = method === 'MOBILE_MONEY' || method === 'BANK_TRANSFER'
+  const needsRef     = method === 'BANK_TRANSFER'
+  const isMoMo       = method === 'MOBILE_MONEY'
 
-  const handleSubmit = async () => {
+  // ── Paiement FedaPay (Mobile Money direct) ─────────────────────────────────
+  const handleFedapayPayment = () => {
+    setError('')
+    if (!window.FedaPay) {
+      setError('Le module de paiement FedaPay n\'est pas chargé. Vérifiez votre connexion.')
+      return
+    }
+    setSaving(true)
+    try {
+      window.FedaPay.init({
+        public_key: FEDAPAY_PUBLIC_KEY,
+        transaction: {
+          amount: Math.round(amount),
+          description: `Facture ${invoice.invoiceNumber} | id:${invoice.id}`,
+        },
+        customer: {
+          email: invoice.clientEmail ?? '',
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onComplete: async (response: any) => {
+          // FedaPay retourne { reason: "CHECKOUT COMPLETE", transaction: { id, status, ... } }
+          // La transaction réelle est dans response.transaction, pas à la racine
+          const txn    = response?.transaction ?? response
+          const reason = response?.reason ?? ''
+
+          // Dialogue fermé sans paiement
+          if (reason === 'DIALOG DISMISSED' || !txn?.id) {
+            setSaving(false)
+            return
+          }
+
+          // ✅ Le statut est dans txn.status (string "approved")
+          if (txn.status === 'approved') {
+            try {
+              await verifyFedapayPayment(invoice.id, String(txn.id))
+              setDoneType('fedapay')
+              setDone(true)
+              setTimeout(() => { onSuccess(); onClose() }, 2800)
+            } catch {
+              setError('Paiement reçu par FedaPay mais la vérification a échoué. Contactez le support avec l\'ID : ' + txn.id)
+              setSaving(false)
+            }
+          } else {
+            setError(`Paiement non abouti (statut : ${txn.status ?? 'inconnu'}). Vérifiez votre solde et réessayez.`)
+            setSaving(false)
+          }
+        },
+      }).open()
+    } catch (e: unknown) {
+      const err = e as { message?: string }
+      setError(err?.message ?? 'Impossible d\'ouvrir le widget de paiement.')
+      setSaving(false)
+    }
+  }
+
+  // ── Déclaration manuelle (Espèces / Virement / Chèque) ─────────────────────
+  const handleManualDeclare = async () => {
     if (needsRef && !reference.trim()) {
-      setError('La référence de transaction est obligatoire pour ce mode de paiement.')
+      setError('La référence de virement est obligatoire.')
       return
     }
     setError(''); setSaving(true)
@@ -158,6 +227,7 @@ function DeclarePaymentModal({
         notes:          notes.trim() || undefined,
       }
       await declarePayment(invoice.id, body)
+      setDoneType('declare')
       setDone(true)
       setTimeout(() => { onSuccess(); onClose() }, 2500)
     } catch (e: unknown) {
@@ -181,22 +251,38 @@ function DeclarePaymentModal({
             <h3 className="font-black text-stone-900 text-lg">Régler ma facture</h3>
             <p className="text-xs text-stone-400 mt-0.5 font-mono">{invoice.invoiceNumber}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-stone-200 text-stone-400 transition-colors">
+          <button onClick={onClose} disabled={saving}
+            className="p-2 rounded-xl hover:bg-stone-200 text-stone-400 transition-colors disabled:opacity-40">
             <X size={18} />
           </button>
         </div>
 
+        {/* ── Success state ─────────────────────────────────────────────────── */}
         {done ? (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
             className="p-12 text-center"
           >
-            <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-5">
-              <ShieldCheck size={36} className="text-violet-500" />
-            </div>
-            <h4 className="text-xl font-black text-stone-900 mb-2">Paiement déclaré !</h4>
-            <p className="text-stone-400 text-sm leading-relaxed max-w-xs mx-auto">
-              Votre déclaration a été transmise. Notre équipe vérifiera le paiement et confirmera sous 24h.
-            </p>
+            {doneType === 'fedapay' ? (
+              <>
+                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <CheckCircle size={36} className="text-emerald-500" />
+                </div>
+                <h4 className="text-xl font-black text-stone-900 mb-2">Paiement confirmé !</h4>
+                <p className="text-stone-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  Votre paiement a été vérifié et validé automatiquement par FedaPay. Votre facture est maintenant réglée.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <ShieldCheck size={36} className="text-violet-500" />
+                </div>
+                <h4 className="text-xl font-black text-stone-900 mb-2">Déclaration envoyée !</h4>
+                <p className="text-stone-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  Notre équipe vérifiera votre paiement et confirmera sous 24h.
+                </p>
+              </>
+            )}
           </motion.div>
         ) : (
           <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
@@ -213,15 +299,15 @@ function DeclarePaymentModal({
               <p className="text-sm font-bold text-stone-700 mb-3">Comment souhaitez-vous payer ?</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: <Smartphone size={18} />, color: 'violet' },
-                  { key: 'CASH',         label: 'Espèces',      icon: <Banknote size={18} />,   color: 'green' },
-                  { key: 'BANK_TRANSFER',label: 'Virement',     icon: <Building size={18} />,   color: 'blue' },
-                  { key: 'CHECK',        label: 'Chèque',       icon: <FileText size={18} />,   color: 'orange' },
+                  { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: <Smartphone size={18} /> },
+                  { key: 'CASH',         label: 'Espèces',      icon: <Banknote size={18} />   },
+                  { key: 'BANK_TRANSFER',label: 'Virement',     icon: <Building size={18} />   },
+                  { key: 'CHECK',        label: 'Chèque',       icon: <FileText size={18} />   },
                 ] as const).map(opt => (
                   <button key={opt.key} onClick={() => { setMethod(opt.key as PaymentMethod); setError('') }}
                     className={`flex items-center gap-2.5 p-3.5 rounded-2xl border-2 text-sm font-bold transition-all duration-150 ${
                       method === opt.key
-                        ? `border-stone-900 bg-stone-900 text-white shadow-md`
+                        ? 'border-stone-900 bg-stone-900 text-white shadow-md'
                         : 'border-stone-200 text-stone-600 hover:border-stone-300 hover:bg-stone-50'
                     }`}
                   >
@@ -232,83 +318,119 @@ function DeclarePaymentModal({
               </div>
             </div>
 
-            {/* Instructions */}
-            <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                {instructions.icon}
-                <p className="text-sm font-bold text-stone-700">{instructions.title}</p>
-              </div>
-              <ul className="space-y-1.5">
-                {instructions.lines.map((line, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-stone-500 leading-relaxed">
-                    <span className="text-amber-500 font-black mt-0.5 shrink-0">{i + 1}.</span>
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* ── Mobile Money : FedaPay direct ────────────────────────────── */}
+            {isMoMo ? (
+              <div className="space-y-4">
+                {/* FedaPay info banner */}
+                <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smartphone size={15} className="text-indigo-500" />
+                    <p className="text-sm font-black text-indigo-800">Paiement Mobile Money sécurisé</p>
+                    <span className="ml-auto text-[10px] font-bold text-indigo-500 bg-indigo-100 px-2 py-0.5 rounded-full">via FedaPay</span>
+                  </div>
+                  <ul className="space-y-1">
+                    {[
+                      'Cliquez "Payer maintenant" ci-dessous',
+                      'Choisissez MTN MoMo ou Moov Money',
+                      'Entrez votre numéro et confirmez avec votre PIN',
+                      'La confirmation est instantanée et automatique',
+                    ].map((line, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-indigo-600">
+                        <span className="font-black mt-0.5 shrink-0 text-indigo-400">{i + 1}.</span>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            {/* Reference (for MoMo / Bank transfer) */}
-            {needsRef && (
-              <div>
-                <label className="block text-sm font-bold text-stone-700 mb-1.5">
-                  Référence de transaction <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text" value={reference} onChange={e => setReference(e.target.value)}
-                  placeholder={method === 'MOBILE_MONEY' ? 'Ex : 1234567890 (ID MoMo)' : 'Ex : VIR-20260427-001'}
-                  className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent font-mono"
-                />
-                <p className="text-xs text-stone-400 mt-1">
-                  {method === 'MOBILE_MONEY'
-                    ? "L'ID de transaction vous est envoyé par SMS après le paiement."
-                    : "Indiquez le numéro de référence de votre virement bancaire."}
-                </p>
+                {error && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
+                    <X size={14} className="shrink-0 mt-0.5" />{error}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button onClick={onClose} disabled={saving}
+                    className="flex-1 py-3.5 border border-stone-200 rounded-xl text-sm font-semibold text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40">
+                    Annuler
+                  </button>
+                  <motion.button whileTap={{ scale: 0.97 }} onClick={handleFedapayPayment} disabled={saving}
+                    className="flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 disabled:opacity-60 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all duration-200 text-sm shadow-lg shadow-indigo-500/25"
+                  >
+                    {saving
+                      ? <><Loader2 size={14} className="animate-spin" /> Traitement…</>
+                      : <><Smartphone size={14} /> Payer maintenant</>
+                    }
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              /* ── Autres méthodes : déclaration manuelle ─────────────────── */
+              <div className="space-y-4">
+                {/* Instructions */}
+                <div className="bg-stone-50 border border-stone-100 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    {instructions.icon}
+                    <p className="text-sm font-bold text-stone-700">{instructions.title}</p>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {instructions.lines.map((line, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-stone-500 leading-relaxed">
+                        <span className="text-amber-500 font-black mt-0.5 shrink-0">{i + 1}.</span>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Reference for bank transfer */}
+                {needsRef && (
+                  <div>
+                    <label className="block text-sm font-bold text-stone-700 mb-1.5">
+                      Référence de virement <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text" value={reference} onChange={e => setReference(e.target.value)}
+                      placeholder="Ex : VIR-20260428-001"
+                      className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 font-mono"
+                    />
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-bold text-stone-700 mb-1.5">
+                    Notes <span className="text-stone-400 font-normal">(optionnel)</span>
+                  </label>
+                  <input
+                    type="text" value={notes} onChange={e => setNotes(e.target.value)}
+                    placeholder="Informations complémentaires pour l'équipe…"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
+                    <X size={14} className="shrink-0 mt-0.5" />{error}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button onClick={onClose}
+                    className="flex-1 py-3 border border-stone-200 rounded-xl text-sm font-semibold text-stone-600 hover:bg-stone-50 transition-colors">
+                    Annuler
+                  </button>
+                  <motion.button whileTap={{ scale: 0.98 }} onClick={handleManualDeclare} disabled={saving}
+                    className="flex-1 py-3 bg-stone-900 hover:bg-amber-500 hover:text-stone-900 disabled:opacity-60 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all duration-200 text-sm shadow-lg"
+                  >
+                    {saving
+                      ? <><Loader2 size={14} className="animate-spin" /> Envoi…</>
+                      : <><Send size={14} /> Déclarer mon paiement</>
+                    }
+                  </motion.button>
+                </div>
               </div>
             )}
-
-            {/* Amount declared */}
-            <div>
-              <label className="block text-sm font-bold text-stone-700 mb-1.5">Montant déclaré (FCFA)</label>
-              <input
-                type="number" value={amount} onChange={e => setAmount(Number(e.target.value))}
-                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent font-bold"
-              />
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-bold text-stone-700 mb-1.5">
-                Notes <span className="text-stone-400 font-normal">(optionnel)</span>
-              </label>
-              <input
-                type="text" value={notes} onChange={e => setNotes(e.target.value)}
-                placeholder="Informations complémentaires pour l'équipe…"
-                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
-                <X size={14} className="shrink-0 mt-0.5" />{error}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-1">
-              <button onClick={onClose}
-                className="flex-1 py-3 border border-stone-200 rounded-xl text-sm font-semibold text-stone-600 hover:bg-stone-50 transition-colors">
-                Annuler
-              </button>
-              <motion.button whileTap={{ scale: 0.98 }} onClick={handleSubmit} disabled={saving}
-                className="flex-1 py-3 bg-stone-900 hover:bg-amber-500 hover:text-stone-900 disabled:opacity-60 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all duration-200 text-sm shadow-lg"
-              >
-                {saving
-                  ? <><Loader2 size={14} className="animate-spin" /> Envoi…</>
-                  : <><Send size={14} /> Déclarer mon paiement</>
-                }
-              </motion.button>
-            </div>
           </div>
         )}
       </motion.div>

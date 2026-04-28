@@ -59,7 +59,7 @@ public class OrderService {
             );
             if (!available) {
                 eventPublisher.publishProductionTrigger(
-                    null, item.getProductId(), item.getQuantity()
+                    null, item.getProductId(), item.getProductName(), item.getQuantity()
                 );
                 throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

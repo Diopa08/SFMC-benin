@@ -1,10 +1,6 @@
 package com.sfmc.inventory_service.entity;
 
-import jakarta.persistence.*;
-
-import java.time.LocalDateTime;
-
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -15,7 +11,9 @@ public class StockMovement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
- // ✅ Ajouter cette relation vers Stock
+
+    /** @JsonIgnore — évite la boucle infinie Jackson (StockMovement → Stock → List<StockMovement> → …) */
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stock_id", nullable = false)
     private Stock stock;

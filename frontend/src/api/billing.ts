@@ -27,3 +27,6 @@ export const confirmPayment = (id: number) =>
 
 export const cancelInvoice = (id: number) =>
   client.delete<Invoice>(`/invoices/${id}/cancel`).then(r => r.data)
+
+export const verifyFedapayPayment = (id: number, transactionId: string) =>
+  client.post<Invoice>(`/invoices/${id}/verify-fedapay`, { transactionId }).then(r => r.data)
