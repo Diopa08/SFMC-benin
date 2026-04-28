@@ -109,26 +109,26 @@ export default function LandingPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
 
         /* NAV */
         .ln { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 1.6rem 4rem; display: flex; align-items: center; justify-content: space-between; transition: all .35s; }
         .ln.s { background: rgba(8,8,12,.92); padding: 1rem 4rem; border-bottom: 1px solid rgba(255,255,255,.06); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-        .ln-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: .15em; color: #fff; cursor: pointer; }
+        .ln-logo { font-family: 'Montserrat', sans-serif; font-size: 1.4rem; letter-spacing: .15em; color: #fff; cursor: pointer; }
         .ln-logo b { color: #C89520; }
         .ln-links { display: flex; align-items: center; gap: 3rem; }
-        .ln-link { font-family: 'Barlow', sans-serif; font-size: .75rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.4); background: none; border: none; cursor: pointer; transition: color .2s; }
+        .ln-link { font-family: 'Montserrat', sans-serif; font-size: .75rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.4); background: none; border: none; cursor: pointer; transition: color .2s; }
         .ln-link:hover { color: #fff; }
-        .ln-cta { font-family: 'Barlow', sans-serif; font-size: .73rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #111; background: #C89520; border: none; padding: .6rem 1.8rem; cursor: pointer; transition: all .2s; }
+        .ln-cta { font-family: 'Montserrat', sans-serif; font-size: .73rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #111; background: #C89520; border: none; padding: .6rem 1.8rem; cursor: pointer; transition: all .2s; }
         .ln-cta:hover { background: #d4a030; transform: translateY(-1px); }
 
         /* HERO */
         .lh { min-height: 100vh; background: #07070e; display: grid; grid-template-columns: 52% 48%; position: relative; overflow: hidden; }
         .lh::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 25% 50%, rgba(200,149,32,.06) 0%, transparent 65%); pointer-events: none; z-index: 1; }
         .lh-left { display: flex; flex-direction: column; justify-content: center; padding: 9rem 3rem 6rem 6rem; position: relative; z-index: 2; }
-        .lh-tag { display: inline-flex; align-items: center; gap: .7rem; font-family: 'Barlow', sans-serif; font-size: .68rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #C89520; margin-bottom: 2.2rem; }
+        .lh-tag { display: inline-flex; align-items: center; gap: .7rem; font-family: 'Montserrat', sans-serif; font-size: .68rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #C89520; margin-bottom: 2.2rem; }
         .lh-tag::before { content: ''; width: 24px; height: 1px; background: #C89520; flex-shrink: 0; }
         .lh-right { position: relative; background: #050510; overflow: hidden; }
 
@@ -142,38 +142,38 @@ export default function LandingPage() {
         .ls-item:nth-child(3)::after { background: #22c55e; }
         .ls-item:nth-child(4)::after { background: #a855f7; }
         .ls-item.on::after { transform: scaleX(1); }
-        .ls-n { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem,4.5vw,4.5rem); line-height: 1; }
+        .ls-n { font-family: 'Montserrat', sans-serif; font-size: clamp(3rem,4.5vw,4.5rem); line-height: 1; }
         .ls-n b { color: inherit; font: inherit; }
-        .ls-l { font-family: 'Barlow', sans-serif; font-size: .7rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #999; margin-top: .5rem; }
+        .ls-l { font-family: 'Montserrat', sans-serif; font-size: .7rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #999; margin-top: .5rem; }
 
         /* FEATURES */
         .lf { background: #0a0a12; padding: 7rem 6rem; }
         .lf-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5rem; gap: 2rem; }
-        .lf-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.8rem,4vw,4.2rem); color: #fff; letter-spacing: .03em; line-height: 1; }
+        .lf-title { font-family: 'Montserrat', sans-serif; font-size: clamp(2.8rem,4vw,4.2rem); color: #fff; letter-spacing: .03em; line-height: 1; }
         .lf-title span { color: #C89520; }
-        .lf-hint { font-family: 'Barlow', sans-serif; font-size: .82rem; font-weight: 300; color: rgba(255,255,255,.3); max-width: 260px; text-align: right; line-height: 1.8; }
+        .lf-hint { font-family: 'Montserrat', sans-serif; font-size: .82rem; font-weight: 300; color: rgba(255,255,255,.3); max-width: 260px; text-align: right; line-height: 1.8; }
         .lf-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: rgba(255,255,255,.06); border-radius: 16px; overflow: hidden; }
 
         /* PROCESS */
         .lp { background: #f5f2ec; padding: 7rem 6rem; }
-        .lp-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem,3.5vw,3.8rem); color: #111; letter-spacing: .03em; margin-bottom: 4rem; text-align: center; }
+        .lp-title { font-family: 'Montserrat', sans-serif; font-size: clamp(2.5rem,3.5vw,3.8rem); color: #111; letter-spacing: .03em; margin-bottom: 4rem; text-align: center; }
         .lp-title span { color: #C89520; }
         .lp-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2.5rem; }
 
         /* CTA */
         .lc { background: #0d0d18; padding: 6rem; display: flex; align-items: center; justify-content: space-between; gap: 3rem; border-top: 1px solid rgba(200,149,32,.18); position: relative; overflow: hidden; }
-        .lc::before { content: 'SFMC'; font-family: 'Bebas Neue', sans-serif; font-size: 18rem; color: rgba(255,255,255,.012); position: absolute; right: -2rem; top: 50%; transform: translateY(-50%); pointer-events: none; line-height: 1; }
-        .lc h2 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem,4vw,4rem); color: #fff; letter-spacing: .03em; line-height: 1; }
+        .lc::before { content: 'SFMC'; font-family: 'Montserrat', sans-serif; font-size: 18rem; color: rgba(255,255,255,.012); position: absolute; right: -2rem; top: 50%; transform: translateY(-50%); pointer-events: none; line-height: 1; }
+        .lc h2 { font-family: 'Montserrat', sans-serif; font-size: clamp(2.5rem,4vw,4rem); color: #fff; letter-spacing: .03em; line-height: 1; }
         .lc h2 span { color: #C89520; }
-        .lc p { font-family: 'Barlow', sans-serif; font-size: .88rem; font-weight: 300; color: rgba(255,255,255,.4); margin-top: .8rem; line-height: 1.7; }
-        .lc-btn { font-family: 'Barlow', sans-serif; font-size: .78rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #111; background: #C89520; border: 2px solid #C89520; padding: 1.1rem 3rem; cursor: pointer; white-space: nowrap; transition: all .2s; flex-shrink: 0; }
+        .lc p { font-family: 'Montserrat', sans-serif; font-size: .88rem; font-weight: 300; color: rgba(255,255,255,.4); margin-top: .8rem; line-height: 1.7; }
+        .lc-btn { font-family: 'Montserrat', sans-serif; font-size: .78rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #111; background: #C89520; border: 2px solid #C89520; padding: 1.1rem 3rem; cursor: pointer; white-space: nowrap; transition: all .2s; flex-shrink: 0; }
         .lc-btn:hover { background: transparent; color: #C89520; transform: translateY(-2px); }
 
         /* FOOTER */
         .lfoo { background: #060610; padding: 2.5rem 6rem; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,.05); }
-        .lfoo-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: .15em; color: rgba(255,255,255,.25); }
+        .lfoo-logo { font-family: 'Montserrat', sans-serif; font-size: 1.1rem; letter-spacing: .15em; color: rgba(255,255,255,.25); }
         .lfoo-logo b { color: #C89520; }
-        .lfoo-copy { font-family: 'Barlow', sans-serif; font-size: .68rem; color: rgba(255,255,255,.18); letter-spacing: .1em; }
+        .lfoo-copy { font-family: 'Montserrat', sans-serif; font-size: .68rem; color: rgba(255,255,255,.18); letter-spacing: .1em; }
 
         /* PING */
         @keyframes lping { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(200,149,32,.7)} 70%{opacity:.6;box-shadow:0 0 0 10px rgba(200,149,32,0)} }
@@ -226,7 +226,7 @@ export default function LandingPage() {
             Matériaux · Production · Livraison
           </motion.div>
 
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", lineHeight: 0.92, letterSpacing: '.01em' }}>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", lineHeight: 0.92, letterSpacing: '.01em' }}>
             <motion.span
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -258,7 +258,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              fontFamily: "'Barlow', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               fontSize: '.95rem',
               fontWeight: 300,
               color: 'rgba(255,255,255,.5)',
@@ -279,7 +279,7 @@ export default function LandingPage() {
             <button
               onClick={() => navigate('/login')}
               style={{
-                fontFamily: "'Barlow', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: '.78rem',
                 fontWeight: 700,
                 letterSpacing: '.15em',
@@ -309,7 +309,7 @@ export default function LandingPage() {
             <button
               onClick={() => scrollTo('modules')}
               style={{
-                fontFamily: "'Barlow', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: '.75rem',
                 fontWeight: 600,
                 letterSpacing: '.12em',
@@ -344,7 +344,7 @@ export default function LandingPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '.8rem',
-              fontFamily: "'Barlow', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               fontSize: '.65rem',
               fontWeight: 600,
               letterSpacing: '.18em',
@@ -380,7 +380,7 @@ export default function LandingPage() {
                 className="lpingdot"
                 style={{ width: 7, height: 7, borderRadius: '50%', background: '#C89520', flexShrink: 0 }}
               />
-              <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.28)' }}>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.28)' }}>
                 Système actif
               </span>
             </motion.div>
@@ -404,9 +404,9 @@ export default function LandingPage() {
                 boxShadow: '0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06)',
               }}
             >
-              <div style={{ fontSize: 9, fontFamily: "'Barlow', sans-serif", fontWeight: 700, letterSpacing: '.18em', color: 'rgba(200,149,32,.85)', textTransform: 'uppercase', marginBottom: 8 }}>Commandes</div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 40, color: '#fff', letterSpacing: '.04em', lineHeight: 1 }}>247</div>
-              <div style={{ fontSize: 10, color: 'rgba(34,197,94,.85)', marginTop: 6, fontFamily: "'Barlow', sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 9, fontFamily: "'Montserrat', sans-serif", fontWeight: 700, letterSpacing: '.18em', color: 'rgba(200,149,32,.85)', textTransform: 'uppercase', marginBottom: 8 }}>Commandes</div>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 40, color: '#fff', letterSpacing: '.04em', lineHeight: 1 }}>247</div>
+              <div style={{ fontSize: 10, color: 'rgba(34,197,94,.85)', marginTop: 6, fontFamily: "'Montserrat', sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span>↑</span><span>+12% ce mois</span>
               </div>
             </motion.div>
@@ -430,9 +430,9 @@ export default function LandingPage() {
                 boxShadow: '0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06)',
               }}
             >
-              <div style={{ fontSize: 9, fontFamily: "'Barlow', sans-serif", fontWeight: 700, letterSpacing: '.18em', color: 'rgba(59,130,246,.85)', textTransform: 'uppercase', marginBottom: 8 }}>Stock</div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 40, color: '#fff', letterSpacing: '.04em', lineHeight: 1 }}>98%</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 6, fontFamily: "'Barlow', sans-serif" }}>Disponible</div>
+              <div style={{ fontSize: 9, fontFamily: "'Montserrat', sans-serif", fontWeight: 700, letterSpacing: '.18em', color: 'rgba(59,130,246,.85)', textTransform: 'uppercase', marginBottom: 8 }}>Stock</div>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 40, color: '#fff', letterSpacing: '.04em', lineHeight: 1 }}>98%</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 6, fontFamily: "'Montserrat', sans-serif" }}>Disponible</div>
             </motion.div>
 
             {/* Card: Production */}
@@ -454,9 +454,9 @@ export default function LandingPage() {
                 boxShadow: '0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06)',
               }}
             >
-              <div style={{ fontSize: 9, fontFamily: "'Barlow', sans-serif", fontWeight: 700, letterSpacing: '.18em', color: 'rgba(168,85,247,.85)', textTransform: 'uppercase', marginBottom: 8 }}>Production</div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 40, color: '#fff', letterSpacing: '.04em', lineHeight: 1 }}>12</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 6, fontFamily: "'Barlow', sans-serif" }}>Lots actifs</div>
+              <div style={{ fontSize: 9, fontFamily: "'Montserrat', sans-serif", fontWeight: 700, letterSpacing: '.18em', color: 'rgba(168,85,247,.85)', textTransform: 'uppercase', marginBottom: 8 }}>Production</div>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 40, color: '#fff', letterSpacing: '.04em', lineHeight: 1 }}>12</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 6, fontFamily: "'Montserrat', sans-serif" }}>Lots actifs</div>
             </motion.div>
 
             {/* Material category pills at the bottom */}
@@ -478,7 +478,7 @@ export default function LandingPage() {
                 <div
                   key={i}
                   style={{
-                    fontFamily: "'Barlow', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                     fontSize: 9,
                     fontWeight: 700,
                     letterSpacing: '.1em',
@@ -571,7 +571,7 @@ export default function LandingPage() {
             >
               <div
                 style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   fontSize: '4rem',
                   lineHeight: 1,
                   color: 'rgba(255,255,255,.05)',
@@ -592,7 +592,7 @@ export default function LandingPage() {
               <div style={{ color: f.color, marginBottom: '1.2rem' }}>{f.icon}</div>
               <div
                 style={{
-                  fontFamily: "'Barlow', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   fontSize: '.95rem',
                   fontWeight: 700,
                   color: '#fff',
@@ -604,7 +604,7 @@ export default function LandingPage() {
               </div>
               <div
                 style={{
-                  fontFamily: "'Barlow', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   fontSize: '.8rem',
                   fontWeight: 300,
                   color: 'rgba(255,255,255,.42)',
@@ -693,7 +693,7 @@ export default function LandingPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 1.5rem',
-                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   fontSize: '1.2rem',
                   color: s.color,
                   borderRadius: 12,
@@ -704,7 +704,7 @@ export default function LandingPage() {
               </div>
               <div
                 style={{
-                  fontFamily: "'Barlow', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   fontSize: '.9rem',
                   fontWeight: 700,
                   color: '#111',
@@ -716,7 +716,7 @@ export default function LandingPage() {
               </div>
               <div
                 style={{
-                  fontFamily: "'Barlow', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   fontSize: '.8rem',
                   fontWeight: 400,
                   color: '#888',
