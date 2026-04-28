@@ -206,13 +206,13 @@ export default function LoginPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600&display=swap');
 
         .lr-root {
           min-height: 100vh;
           background: #0c0c18;
           display: flex; flex-direction: column;
-          font-family: 'Barlow', sans-serif;
+          font-family: 'Montserrat', sans-serif;
           position: relative; overflow: hidden;
         }
         .lr-orb {
@@ -275,7 +275,7 @@ export default function LoginPage() {
         }
         .lr-logo svg { width: 28px; height: 28px; color: #C89520; }
         .lr-title {
-          font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem;
+          font-family: 'Montserrat', sans-serif; font-size: 2.4rem;
           color: #fff; letter-spacing: .1em; line-height: 1;
         }
         .lr-sub {
@@ -299,7 +299,7 @@ export default function LoginPage() {
         }
         .lr-tab {
           flex: 1; padding: .7rem; background: none; border: none;
-          cursor: pointer; font-family: 'Barlow', sans-serif;
+          cursor: pointer; font-family: 'Montserrat', sans-serif;
           font-size: .8rem; font-weight: 600; letter-spacing: .1em;
           text-transform: uppercase; color: rgba(255,255,255,.28);
           transition: color .2s; position: relative;
@@ -313,7 +313,7 @@ export default function LoginPage() {
           width: 100%; padding: .78rem 1rem;
           background: rgba(255,255,255,.05);
           border: 1px solid rgba(255,255,255,.10);
-          color: #fff; font-family: 'Barlow', sans-serif; font-size: .9rem;
+          color: #fff; font-family: 'Montserrat', sans-serif; font-size: .9rem;
           outline: none; transition: border-color .2s, background .2s;
           box-sizing: border-box; border-radius: 8px;
         }
@@ -332,7 +332,7 @@ export default function LoginPage() {
         .lr-btn {
           width: 100%; padding: .9rem;
           background: linear-gradient(135deg, #C89520 0%, #d4a030 100%);
-          border: none; color: #111; font-family: 'Barlow', sans-serif;
+          border: none; color: #111; font-family: 'Montserrat', sans-serif;
           font-size: .83rem; font-weight: 700; letter-spacing: .15em;
           text-transform: uppercase; cursor: pointer;
           transition: all .2s; display: flex; align-items: center;
