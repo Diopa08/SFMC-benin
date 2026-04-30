@@ -232,5 +232,6 @@ SfmcApp/
 ├── .gitignore
 └── README.md
 ```
+Liens du rapport : https://docs.google.com/document/d/17S4_JvhPU2-dZUueA2ZTpJ8fp2G9xX56MmfoZ23UgsM/edit?tab=t.0
 
 
